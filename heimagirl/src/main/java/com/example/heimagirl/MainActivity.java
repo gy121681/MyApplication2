@@ -10,6 +10,7 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
 import com.google.gson.Gson;
 import com.squareup.okhttp.Callback;
 import com.squareup.okhttp.OkHttpClient;
@@ -33,6 +34,8 @@ public class MainActivity extends AppCompatActivity {
     private List<GsonBean.ResultsBean> mListData = new ArrayList<GsonBean.ResultsBean>();
 
 
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -43,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
         // sendAsyncRequest();
 
         mlistView.setAdapter(mBaseAdapter);
+
 
 
     }
@@ -86,10 +90,22 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onResponse(Response response) throws IOException {
                         String result = response.body().string();
-                        GsonBean gsonBean = mGson.fromJson(result, GsonBean.class);
+                        final GsonBean gsonBean = mGson.fromJson(result, GsonBean.class);
 
 
                         Log.d(TAG, "onResponse: " + gsonBean.getResults().get(0).getUrl());
+                        //在主线程上面刷新Ui
+                        mListData.addAll(gsonBean.getResults());
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+
+                                mBaseAdapter.notifyDataSetChanged();
+                                //将网络结果加入数据集合
+
+                            }
+                        });
+
                     }
                 });
             }
@@ -116,22 +132,25 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
-            ViewHolder holder=null;
-            if(convertView==null){
-                convertView= View.inflate(MainActivity.this,R.layout.list_view,null);
-                holder=new ViewHolder();
-                holder.mImageView=(ImageView) convertView.findViewById(R.id.image);
-                holder.mTextView=(TextView)convertView.findViewById(R.id.publish_time);
+            ViewHolder holder = null;
+            if (convertView == null) {
+                convertView = View.inflate(MainActivity.this, R.layout.list_view, null);
+                holder = new ViewHolder();
+                holder.mImageView = (ImageView) convertView.findViewById(R.id.image);
+                holder.mTextView = (TextView) convertView.findViewById(R.id.publish_time);
                 convertView.setTag(holder);
-            }else {
-                holder=(ViewHolder) convertView.getTag();
+            } else {
+                holder = (ViewHolder) convertView.getTag();
                 GsonBean.ResultsBean resultsBean = mListData.get(position);
+                holder.mTextView.setText(resultsBean.getPublishedAt());
+                String url = resultsBean.getUrl();
 
+                Glide.with(MainActivity.this).load(url).into(holder.mImageView);
 
 
             }
 
-                return convertView;
+            return convertView;
 
         }
 
@@ -139,8 +158,8 @@ public class MainActivity extends AppCompatActivity {
     };
 
 
-    public static class ViewHolder{
-     ImageView mImageView;
+    public static class ViewHolder {
+        ImageView mImageView;
         TextView mTextView;
     }
 }
